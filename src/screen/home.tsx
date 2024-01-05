@@ -4,52 +4,140 @@ import {
   useNavigation,
 } from '@react-navigation/native';
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   StyleSheet,
   Text,
   TouchableNativeFeedback,
   View,
 } from 'react-native';
-import React from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import useSWR from 'swr';
 import {fetcher} from '../utils/fetcher';
 import {IBook} from '../api/types';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useNetInfo} from '@react-native-community/netinfo';
 
 export default function Home({}: {
   navigation: NavigationProp<any>;
   route: RouteProp<any>;
 }) {
-  const {data, error, isLoading} = useSWR('books', () =>
+  const {isConnected} = useNetInfo();
+  const {data, isLoading, mutate, isValidating} = useSWR('books', () =>
     fetcher.get('books').json<{
       data: IBook[];
     }>(),
   );
 
+  const [storedData, setStoredData] = useState<typeof data | null>();
+
+  const storeData = useCallback(async (value: any) => {
+    try {
+      await AsyncStorage.setItem('books', JSON.stringify(value));
+    } catch (e) {
+      // saving error
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isConnected) {
+      AsyncStorage.getItem('books').then(data => {
+        if (data) {
+          setStoredData(JSON.parse(data));
+        }
+      });
+    }
+    if (isConnected) {
+      mutate();
+      setStoredData(null);
+    }
+  }, [isConnected, mutate]);
+
+  useEffect(() => {
+    if (data) {
+      storeData(data);
+    }
+  });
+
+  const shownData = !isConnected && storedData ? storedData : data;
+  console.log({
+    isConnected,
+    shownData,
+  });
+
   return (
-    <View>
-      {isLoading && <Text>Loading...</Text>}
-      {error && <Text>Error...</Text>}
-      {data && (
+    <View
+      style={{
+        height: ' 100%',
+      }}>
+      {!isConnected && (
+        <View
+          style={{
+            backgroundColor: '#cecece',
+            paddingVertical: 10,
+          }}>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: '#0c0c0c',
+            }}>
+            Offline
+          </Text>
+        </View>
+      )}
+      {isValidating && (
+        <View
+          style={{
+            backgroundColor: '#add8e6',
+            paddingVertical: 10,
+          }}>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: 'rgba(0,0,0,0.5)',
+            }}>
+            Mengupdate
+          </Text>
+        </View>
+      )}
+      {isLoading && (
+        <View
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+          }}>
+          <ActivityIndicator size={32} />
+        </View>
+      )}
+      {/* {error && <Text>Error...</Text>} */}
+      {shownData && (
         <FlatList
-          data={data.data.sort((a, b) => b.tahun_terbit - a.tahun_terbit)}
+          data={shownData.data.sort((a, b) => b.tahun_terbit - a.tahun_terbit)}
           contentContainerStyle={{paddingBottom: 100, paddingTop: 10}}
           renderItem={({item}) => <BookCard data={item} />}
           keyExtractor={item => item.id.toString()}
         />
       )}
-      <AddButton />
+      {isConnected && <AddButton />}
     </View>
   );
 }
 
 const BookCard = ({data}: {data: IBook}) => {
+  const {isConnected} = useNetInfo();
   const navigation = useNavigation<NativeStackScreenProps<any>['navigation']>();
   const pressHandler = () => {
-    navigation.navigate('Add', {
-      isEdit: true,
-      bookData: data,
-    });
+    if (isConnected) {
+      navigation.navigate('Add', {
+        isEdit: true,
+        bookData: data,
+      });
+    } else {
+      Alert.alert('Tidak bisa mengubah data saat offline');
+    }
   };
 
   return (
@@ -101,7 +189,6 @@ const styles = StyleSheet.create({
 export const AddButton = () => {
   const navigation = useNavigation<NativeStackScreenProps<any>['navigation']>();
 
-  // an FAB Button
   return (
     <View
       style={{

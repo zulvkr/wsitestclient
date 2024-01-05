@@ -106,6 +106,7 @@ export default function AddEdit({
         paddingHorizontal: 16,
         gap: 16,
         paddingTop: 20,
+        backgroundColor: 'white',
       }}>
       <View>
         <Text>Kode Buku:</Text>
