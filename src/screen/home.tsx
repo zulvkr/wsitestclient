@@ -195,23 +195,34 @@ export const AddButton = () => {
         position: 'absolute',
         bottom: 16,
         right: 16,
-        backgroundColor: '#00c853',
         width: 56,
         height: 56,
         borderRadius: 28,
         elevation: 4,
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
       }}>
-      <Text
-        style={{
-          fontSize: 32,
-          color: 'white',
-          fontWeight: 'bold',
-        }}
-        onPress={() => navigation.navigate('Add')}>
-        +
-      </Text>
+      <TouchableNativeFeedback onPress={() => navigation.navigate('Add')}>
+        <View
+          style={{
+            backgroundColor: '#00c853',
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            elevation: 4,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <Text
+            style={{
+              fontSize: 32,
+              color: 'white',
+            }}>
+            +
+          </Text>
+        </View>
+      </TouchableNativeFeedback>
     </View>
   );
 };
